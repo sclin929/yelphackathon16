@@ -1,28 +1,23 @@
 html, body {
   margin: 0;
   width: 100%;
-  /*background-color: #AF272F;*/
 }
 
 div {
   /*border: solid 1px black;*/
-  text-align: center;
   cursor: default;
+  color: #AF272F;
 }
 
 input {
-  margin: 0px 2px;
-
-  min-height: 30px;
-  min-width: 325px;
-
   font-family: 'Roboto', sans-serif;
   font-weight: 300;
-  font-size: 16px;
 }
 
+/* View of title in default view */
 .title-content { 
   margin-top: 100px;
+  text-align: center;
 }
 
 .title {
@@ -43,20 +38,33 @@ input {
   font-size: 25px;
 }
 
+/* CSS for query bar in all views */
 .query-form {
   padding: 8px;
   min-height: 35px;
+  min-width: 1050px;
   width: 100%;
+
+  text-align: center;
 }
 
-.query-title {
+.query-form input {
+  margin: 0px 2px;
+
+  min-height: 30px;
+  min-width: 325px;
+
+  font-size: 16px;
+}
+
+.app-name {
   display: none;
 
   font-family: 'Open Sans', sans-serif;;
   font-size: 20px;
 }
 
-.query-title+input {
+.app-name+input {
     margin-left: 50px;
 }
 
@@ -83,6 +91,7 @@ input {
   outline:0;
 }
 
+/* CSS for map */
 .map {
   position: absolute;
   top: 350px;
@@ -90,5 +99,55 @@ input {
   right: 0px;
   bottom: 0px;
 
+  min-height: 305px;
   max-height: 305px;
+}
+
+/* Display of query results */
+.results {
+  display: none;
+
+  position: absolute;
+  top: 365px;
+
+  min-width: 1050px;
+  width: 100%; 
+
+  padding-left: 10px;
+}
+
+.results-filter {
+  float: left;
+
+  min-height: 100%;
+  height: 100%;
+  min-width: 275px;
+  width: 275px;
+
+  border-right: solid 1px #D9D9D9;
+}
+
+.results-filter input {
+  min-height: 20px;
+  height: 20px;
+  min-width: 250px;
+  width: 250px;
+
+  font-size: 14px;
+}
+
+.results-title {
+  margin-bottom: 5px;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 20px;
+}
+
+.info-window {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+}
+
+.info-title {
+  margin-bottom: 3px;
+  font-weight: 700;
 }

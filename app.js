@@ -13,24 +13,6 @@ var app = express();
 var HTTP_GET = 'GET';
 var YELP_SEARCH_URL = 'https://api.yelp.com/v2/search';
 
-var searchParams = {
-  term: 'food',
-  category_filter: 'restaurants',
-  bounds: ''
-};
-
-var oauthParams = {
-  oauth_consumer_key: process.env.c_key,
-  oauth_token: process.env.token,
-  oauth_nonce: n(),
-  oauth_timestamp: n().toString().substr(0,10),
-  oauth_signature_method: 'HMAC-SHA1',
-  oauth_version: '1.0'
-}
-
-var cSecret = process.env.c_secret;
-var tSecret = process.env.t_secret;
-
 // For parsing the request body
 app.use(express.static(__dirname + '/static'));
 
@@ -50,7 +32,25 @@ app.get('/findRestaurants', function(req, res) {
   var neLng = req.query.neLng;
   
   var searchBounds = swLat + ',' + swLng + '|' + neLat + ',' + neLng;
-  searchParams.bounds = searchBounds;
+
+  var oauthParams = {
+    oauth_consumer_key: process.env.c_key,
+    oauth_token: process.env.token,
+    oauth_nonce: n(),
+    oauth_timestamp: n().toString().substr(0,10),
+    oauth_signature_method: 'HMAC-SHA1',
+    oauth_version: '1.0'
+  }
+
+  var searchParams = {
+    term: 'food',
+    category_filter: 'restaurants',
+    offset: req.query.offset,
+    bounds: searchBounds
+  };
+
+  var cSecret = process.env.c_secret;
+  var tSecret = process.env.t_secret;
 
   var params = _.assign(searchParams, oauthParams);
 

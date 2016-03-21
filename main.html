@@ -5,16 +5,16 @@
     <title>Find Restaurants</title>
     <link rel="stylesheet" type="text/css" href="/main.css"/>
     <link href='https://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
-    <link href='https://fonts.googleapis.com/css?family=Roboto:100,300,400' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Roboto:100,300,400,700' rel='stylesheet' type='text/css'>
   </head>
   <body>
-    <div class="content">
+    <div class="query">
       <div class="title-content">
         <div class="title">Restaurant Along</div>
         <div class="title-caption">Find restaurants along your route.</div>
       </div>
       <div class="query-form">
-        <div class="query-title">Restaurant Along</div>
+        <div class="app-name">Restaurant Along</div>
         <input type="text" id="origin" placeholder="Enter your starting location here..." required />
         <input type="text" id="destination" placeholder="Enter your destination here..." required />
         <button type="button" id="go-button" class="go-button">Go</button>
@@ -22,6 +22,13 @@
     </div>
 
     <div id="map" class="map"></div>
+    <div class="results">
+      <div class="results-filter">
+        <div class="results-title">0 restaurants found</div>
+        <input type="text" id="rest-category" placeholder="Filter results here..." />
+        
+      </div>
+    </div>
 
     <script src="/jquery-1.11.2.min.js"></script>
     <script src="/jquery-ui.min.js"></script>
