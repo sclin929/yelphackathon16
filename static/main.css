@@ -1,0 +1,94 @@
+html, body {
+  margin: 0;
+  width: 100%;
+  /*background-color: #AF272F;*/
+}
+
+div {
+  /*border: solid 1px black;*/
+  text-align: center;
+  cursor: default;
+}
+
+input {
+  margin: 0px 2px;
+
+  min-height: 30px;
+  min-width: 325px;
+
+  font-family: 'Roboto', sans-serif;
+  font-weight: 300;
+  font-size: 16px;
+}
+
+.title-content { 
+  margin-top: 100px;
+}
+
+.title {
+  min-width: 500px;
+
+  font-family: 'Open Sans', sans-serif;
+  font-size: 60px;
+}
+
+.title-caption {
+  margin-top: 5px;
+  margin-bottom: 30px;
+
+  min-width: 500px;
+
+  font-family: 'Roboto', sans-serif;
+  font-weight: 100;
+  font-size: 25px;
+}
+
+.query-form {
+  padding: 8px;
+  min-height: 35px;
+  width: 100%;
+}
+
+.query-title {
+  display: none;
+
+  font-family: 'Open Sans', sans-serif;;
+  font-size: 20px;
+}
+
+.query-title+input {
+    margin-left: 50px;
+}
+
+.go-button {
+  height: 36px;
+  width: 36px;
+
+  line-height: 30px;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+
+  background-color: #CCC;
+  border: solid 1px #A6A6A6;
+  cursor: pointer;
+}
+
+.go-button:hover {
+  background-color: #A6A6A6;
+  border: solid 1px #D9D9D9;
+}
+
+.go-button:focus {
+  outline:0;
+}
+
+.map {
+  position: absolute;
+  top: 350px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+
+  max-height: 305px;
+}
