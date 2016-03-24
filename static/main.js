@@ -3,24 +3,51 @@ var autocompleteOrigin, autocompleteDest;
 var map;
 var dirService, dirDisplay;
 
-var navbarView = false;
-var isCleared = false;
-var offset = 0;
-var numRestaurants = Infinity;
-var originMarkers = [];
-var destMarkers = [];
-var restMarkers = [];
-var searchResults = [];
-var restCategories = {};
+// Constant variables
+var LAT_COORD_BUFFER = 0.00005;
+var LNG_COORD_BUFFER = 0.00005;
+var LIMIT_PER_PAGE = 20;
 
-var LAT_COORD_BUFFER = 0.0125;
-var LNG_COORD_BUFFER = 0.0005;
+// Global variables
+var navbarView = false;
+var totalNumRestaurants = Infinity;
+var numRestaurants = Infinity;
+var rangeBegin = 1;
+var currentPage = 0;
+
+var originMarkers = [], destMarkers = [];
+var swLat = 0, swLng = 0, neLat = 0, neLng = 0;
+
+// Arrays
+var searchResults = [];   /* Array of JSONs for each business */
+var restMarkers = [];     /* Array of markers for each business */
+
+// Dictionaries
+var pageResults = {};       /* Page number to set of restaurants */
+var currPageResults = {};   /* Page number to set of filtered restaurants */
+var markerDict = {};        /* Restaurant ID to marker on map */
+var restCategories = {};    /* Category to set of restaurants */
 
 // Used to resize results div upon window resize
 $(document).ready(function() {
   $(window).resize(function() {
     var windowHeight = $(window).height();
+    var windowWidth = $(window).width();
     $(".results").height(windowHeight - 365);
+    $(".results").width(windowWidth);
+
+    var resultsWidth = $(".results").width();
+    $(".results-filter").width(resultsWidth-20);
+
+    var resultsHeight = $(".results").height();
+    $(".results-list").height(resultsHeight-50);
+    $(".results-list").width(resultsWidth-100);
+
+    var listHeight = $(".results-list").height();
+    $(".no-results").css("margin-top", (listHeight - 30)/2);
+
+    var arrowHeight = $(".arrow").height();
+    $(".arrow").css("bottom", ((listHeight - arrowHeight)/2) + 10);
   }).resize();
 });
 
@@ -58,7 +85,6 @@ function initialize() {
   var goButton = document.getElementById('go-button');
   google.maps.event.addDomListener(goButton, 'click', animateView);
   google.maps.event.addDomListener(goButton, 'click', calculateRoute);
-  google.maps.event.addDomListener(goButton, 'click', findRestaurants);
 }
 
 // Identifies the user's current location and centers map on the
@@ -84,12 +110,10 @@ function findOrigin() {
     window.alert("Please enter a valid starting location.");
     return;
   }
-
-  if (!isCleared) {
-    clearQuery();
-  }
   
-  findLocation(place, originMarkers, true);
+  var isOrigin = true;
+  clearQuery(isOrigin);
+  findLocation(place, originMarkers, isOrigin);
 }
 
 // Sets the destination of the route
@@ -100,28 +124,26 @@ function findDestination() {
     return;
   }
 
-  if (!isCleared) {
-    clearQuery();
-  }
-
-  findLocation(place, destMarkers, false);
+  var isOrigin = false;
+  clearQuery(isOrigin);
+  findLocation(place, destMarkers, isOrigin);
 }
 
 // Sets a location and marks it on the map
 function findLocation(place, markerArr, isOrigin) {
   if (isOrigin) {
-    markerArr.push(new google.maps.Marker({
+    markerArr = [new google.maps.Marker({
       map: map,
       icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
       position: place.geometry.location
-    }));
+    })];
   
   } else {
-    markerArr.push(new google.maps.Marker({
+    markerArr = [new google.maps.Marker({
       map: map,
       icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
       position: place.geometry.location
-    }));
+    })];
   }
 
   if (place.geometry.viewport) {
@@ -139,55 +161,6 @@ function findLocation(place, markerArr, isOrigin) {
   if (origin.value !== '' && dest.value !== '') { 
     fitMapToMarkers();
   }
-}
-
-// Clears query value and results
-function clearQuery() {
-  dirDisplay.setMap(null);
-
-  if (originMarkers !== undefined && originMarkers.length > 0) {
-    originMarkers.forEach(function(marker) {
-      marker.setMap(null);
-    });
-  }
-
-  if (destMarkers !== undefined && destMarkers.length > 0) {
-    destMarkers.forEach(function(marker) {
-      marker.setMap(null);
-    });
-  }
-
-  if (restMarkers !== undefined && restMarkers.length > 0) {
-    restMarkers.forEach(function(marker) {
-      marker.setMap(null);
-    });
-  }
-
-  originMarkers = [];
-  destMarkers = [];
-  restMarkers = [];
-  searchResults = [];
-  isCleared = true;
-}
-
-// Fits the map to all existing markers
-function fitMapToMarkers() {
-  var bounds = new google.maps.LatLngBounds();
-  originMarkers.forEach(function(marker) {
-    bounds.extend(marker.position);
-  });
-
-  destMarkers.forEach(function(marker) {
-    bounds.extend(marker.position);
-  });
-
-  if (restMarkers !== undefined) {
-    restMarkers.forEach(function(marker) {
-      bounds.extend(marker.position);
-    });
-  }
-  
-  map.fitBounds(bounds);
 }
 
 // Uses direction services to calculate route between
@@ -209,9 +182,18 @@ function calculateRoute() {
   dirService.route(request, function(res, status) {
     if (status == google.maps.DirectionsStatus.OK) {
       dirDisplay.setDirections(res);
+
+      var routeBounds = res.routes[0].bounds;
+      swLat = routeBounds.getSouthWest().lat();
+      swLng = routeBounds.getSouthWest().lng();;
+      neLat = routeBounds.getNorthEast().lat();
+      neLng = routeBounds.getNorthEast().lng();
+
       dirDisplay.setMap(map);
       originMarkers[0].setVisible(false);
       destMarkers[0].setVisible(false);
+
+      findRestaurants();
     } else {
       window.alert("Request for directions failed. Please try again.");
       return;
@@ -247,7 +229,7 @@ function animateView() {
         bottom: 'auto'
       }, 250, function() {
         fitMapToMarkers();   
-        $(".results").css("display", "flex");
+        $(".results").css("display", "inline");
       });
     });
   }
@@ -263,25 +245,55 @@ function animateView() {
   navbarView = true;
 }
 
+// Fits the map to all existing markers
+function fitMapToMarkers() {
+  var bounds = new google.maps.LatLngBounds();
+  originMarkers.forEach(function(marker) {
+    bounds.extend(marker.position);
+  });
+
+  destMarkers.forEach(function(marker) {
+    bounds.extend(marker.position);
+  });
+
+  if (restMarkers !== undefined) {
+    restMarkers.forEach(function(marker) {
+      bounds.extend(marker.position);
+    });
+  }
+  
+  map.fitBounds(bounds);
+}
+
 // Performs Yelp Search API call to find restaurants along a route
 function findRestaurants() {
+  var offset = 0;
+  callSearchApi(offset);
+}
+
+function callSearchApi(offset) {
   $.ajax({
     url: '/findRestaurants',
     data: {
-      swLat: originMarkers[0].getPosition().lat()-LAT_COORD_BUFFER,
-      swLng: originMarkers[0].getPosition().lng()-LNG_COORD_BUFFER,
-      neLat: destMarkers[0].getPosition().lat()+LAT_COORD_BUFFER,
-      neLng: destMarkers[0].getPosition().lng()+LNG_COORD_BUFFER,
+      swLat: swLat+LAT_COORD_BUFFER,
+      swLng: swLng+LNG_COORD_BUFFER,
+      neLat: neLat+LAT_COORD_BUFFER,
+      neLng: neLng+LNG_COORD_BUFFER,
       offset: offset
     },
     dataType: 'json',
     success: function(data, status, res) {
-      numRestaurants = data.total;
+      totalNumRestaurants = (data.total > 1000) ? 1000 : data.total;
+      numRestaurants = totalNumRestaurants;
       searchResults = data.businesses;
 
-      displayResults(numRestaurants);
-      populateMap();
-      isCleared = false;
+      // Populate global variables
+      createRestDictionary();
+      pageResults = createPageResults(searchResults);
+      currPageResults = pageResults;
+
+      // Render UI for query results
+      displayResults();
     },
     error: function(data, status, res) {
       alert('Request for restaurants failed. Please try again.');
@@ -289,14 +301,162 @@ function findRestaurants() {
   });
 }
 
+// Populates restCategories to maps a category (string) 
+// to a set of restaurants
+function createRestDictionary() {
+  searchResults.forEach(function(result) {
+    var restCat = result.categories;
+    
+    restCat.forEach(function(category) {
+      category.forEach(function(subcat) {
+        var currCat = subcat.toLowerCase();
+        if (!(currCat in restCategories)) {
+          restCategories[currCat] = new Set();
+        }
+
+        restCategories[currCat].add(result);
+      });
+    });
+  });
+}
+
 // Updates the UI to show query results
-function displayResults(numRestaurants) {
-  $(".results-title").delay(100).text(numRestaurants + " restaurants found");
+function displayResults() {
+  if (numRestaurants >= 1000) {
+    $(".results-title").delay(50).text(numRestaurants + "+ restaurants found");
+  } else {
+    $(".results-title").delay(50).text(numRestaurants + " restaurants found");
+  }
+
+  $(".results-title").append("<div class='results-caption'>Showing 0-0 of 0</div>");
+  currentPage = 0;  /* Current page always begins at 0 */
+  rangeBegin = 1;
+  manageButtonDisplay();
+  populatePage();
+  populateMap();
+}
+
+// Populate pageResults to map a page index to
+// a list of restaurants
+function createPageResults(resultsList) {
+  var pageToRestaurants = {};
+  var numPages = Math.ceil(resultsList.length/LIMIT_PER_PAGE);
+
+  var resultsCopy = resultsList;
+  for (var i = 0; i < numPages; i++) {
+    var arrLength = resultsCopy.length;
+    var endIndex = (LIMIT_PER_PAGE > arrLength) ? arrLength : LIMIT_PER_PAGE;
+    
+    var restSubset = resultsCopy.splice(0, endIndex);
+    pageToRestaurants[i] = restSubset;
+  }
+
+  return pageToRestaurants;
+}
+
+function decrementPage() {
+  if (currentPage > 0) {
+    rangeBegin -= LIMIT_PER_PAGE;
+    clearResults();
+    currentPage -= 1;
+    manageButtonDisplay();
+    populatePage();
+    populateMap();
+  }
+}
+
+function incrementPage() {
+  var maxNumPages = Math.ceil(numRestaurants/LIMIT_PER_PAGE);
+
+  if (currentPage < maxNumPages-1) {
+    rangeBegin += LIMIT_PER_PAGE;
+    clearResults();
+    currentPage += 1;
+    manageButtonDisplay();
+    populatePage();
+    populateMap();
+  }
+}
+
+function manageButtonDisplay() {
+  var maxNumPages = Math.ceil(numRestaurants/LIMIT_PER_PAGE);
+  
+  // All cases for navigation arrows depending on page
+  if (currentPage == 0 && maxNumPages == 1) {
+    $("#left-arrow").hide();
+    $("#right-arrow").hide();
+
+  } else if (currentPage == 0) {
+    $("#left-arrow").hide();
+    $("#right-arrow").show();
+
+  } else if (currentPage == maxNumPages-1) {
+    $("#right-arrow").hide();
+    $("#left-arrow").show();
+
+  } else {
+    $("#left-arrow").show();
+    $("#right-arrow").show();
+  }
+}
+
+// UI for results list
+function populatePage() {
+  var rangeEnd = rangeBegin + LIMIT_PER_PAGE - 1;
+  rangeEnd = (rangeEnd > numRestaurants) ? numRestaurants : rangeEnd;
+
+  // Display text to indicate range of restaurants shown
+  if (numRestaurants >= 1000) {
+    $(".results-caption").text(
+      "Showing " + rangeBegin + "-" 
+        + rangeEnd + " of " + "1000+"
+    );
+  } else {
+    $(".results-caption").text(
+      "Showing " + rangeBegin + "-" 
+        + rangeEnd + " of " + numRestaurants
+    );
+  }
+
+  // If there are results to show, we need to generate an entry
+  // for each restaurant
+  if (numRestaurants > 0) {
+    $(".no-results").css("display", "none");
+
+    var restArr = currPageResults[currentPage];
+    console.log("restArr is: ", restArr);
+    restArr.forEach(function(restaurant) {
+      $(".results-list").append(
+        "<div class='restaurant-display'>"
+          + "<div class='restaurant-header'>"
+                + "<a href='" + restaurant.url + "' target='_blank'>"
+                + restaurant.name + "</a><img src='" 
+                + restaurant.rating_img_url_large
+                + "' alt='" + restaurant.rating + " stars' >"
+          + "</div>"
+          + "<div class='restaurant-info'>"
+              + retrieveCategories(restaurant.categories)
+        + "</div>"
+      );
+    });
+  }
+}
+
+// Helper function
+function retrieveCategories(categoryArr) {
+  var cleanedCategoryArr = [];
+  categoryArr.forEach(function(subCatArr) {
+    cleanedCategoryArr.push(subCatArr[0]);
+  });
+
+  return cleanedCategoryArr.join(", ");
 }
 
 // Populates the results on the map
 function populateMap() {
-  searchResults.forEach(function(result, i) {
+  var restArr = currPageResults[currentPage];
+
+  restArr.forEach(function(result) {
     var resLatLng = {lat: result.location.coordinate.latitude, 
                      lng: result.location.coordinate.longitude};
 
@@ -312,12 +472,15 @@ function populateMap() {
       content: content
     });
     
-    restMarkers.push(new google.maps.Marker({
+    var marker = new google.maps.Marker({
       map: map,
       position: resLatLng,
       infowindow: infoWindow,
       cursor: 'pointer'
-    }));
+    });
+
+    restMarkers.push(marker);
+    markerDict[result.id] = marker;
   });
 
   restMarkers.forEach(function(restMarker) {
@@ -330,4 +493,83 @@ function populateMap() {
   });
 
   fitMapToMarkers();
+}
+
+function filterResults(filter) {
+  if (filter != '') {
+    var sanitizedFilter = filter.toLowerCase();
+    if (sanitizedFilter in restCategories) {
+      var filteredRests = Array.from(restCategories[sanitizedFilter]);
+      numRestaurants = filteredRests.length;
+      currPageResults = createPageResults(filteredRests);
+
+      clearResults();
+      displayResults();
+
+    } else {
+      $(".results-title").delay(50).text("0 restaurants found");
+      $("#filter-category").attr("placeholder", "Filter results here...");
+      clearResults();
+    }
+
+  // Basically do nothing
+  } else {
+    $("#filter-category").attr("placeholder", "Filter results here...");
+    numRestaurants = totalNumRestaurants;
+    currPageResults = pageResults;
+
+    clearResults();
+    displayResults();
+  }
+}
+
+// Clears query value and results
+function clearQuery(isOrigin) {
+  clearResults();
+  dirDisplay.setMap(null);
+
+  if (isOrigin) {
+    if (originMarkers !== undefined && originMarkers.length > 0) {
+      originMarkers.forEach(function(marker) {
+        marker.setMap(null);
+      });
+
+      destMarkers[0].setVisible(true);
+      originMarkers = [];
+    }
+
+  } else {
+    if (destMarkers !== undefined && destMarkers.length > 0) {
+      destMarkers.forEach(function(marker) {
+        marker.setMap(null);
+      });
+    }
+
+    originMarkers[0].setVisible(true);
+    destMarkers = [];
+  }
+
+  searchResults = [];
+  markerDict = {}, restCategories = {};
+  rangeBegin = 1, currentPage = 0;
+  swLat = 0, swLng = 0, neLat = 0, neLng = 0;
+
+  $("#left-arrow").hide();
+  $("#right-arrow").hide();
+}
+
+// Helper function
+function clearResults() {
+  $(".results-list").empty();
+
+  if (restMarkers !== undefined && restMarkers.length > 0) {
+    restMarkers.forEach(function(marker) {
+      google.maps.event.clearListeners(marker, 'mouseover');
+      google.maps.event.clearListeners(marker, 'mouseout');
+
+      marker.setMap(null);
+    });
+  }
+
+  restMarkers = [];
 }

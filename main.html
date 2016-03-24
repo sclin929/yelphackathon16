@@ -24,9 +24,24 @@
     <div id="map" class="map"></div>
     <div class="results">
       <div class="results-filter">
-        <div class="results-title">0 restaurants found</div>
-        <input type="text" id="rest-category" placeholder="Filter results here..." />
-        
+        <div class="results-header">
+          <div class="results-title">
+            0 restaurants found
+          </div>
+        </div>
+        <div class="filter-function">
+          <input type="text" id="filter-category" placeholder="Filter results here..." />
+          <input type="image" id="filter-button" onclick="filterResults(document.getElementById('filter-category').value)" src="search.png" />
+        </div>
+      </div>
+
+      <div class="results-list">
+        <div class='no-results'>No restaurants to display.</div>
+      </div>
+
+      <div class="nav-arrows">
+        <input type="image" id="left-arrow" class="arrow" src="left-caret.png" onclick="decrementPage()"/>
+        <input type="image" id="right-arrow" class="arrow" src="right-caret.png" onclick="incrementPage()"/>
       </div>
     </div>
 
