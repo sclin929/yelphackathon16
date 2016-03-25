@@ -19,7 +19,7 @@ var SEARCH_LIMIT = 20;
 app.use(express.static(__dirname + '/static'));
 
 // Listen on port 3000 unless otherwise specified
-app.set('port', process.env.port || 3000);
+app.set('port', process.env.PORT || 3000);
 
 // Default view for application
 app.get('/', function(req, res) {
