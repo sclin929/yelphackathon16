@@ -424,7 +424,6 @@ function populatePage() {
     $(".no-results").css("display", "none");
 
     var restArr = currPageResults[currentPage];
-    console.log("restArr is: ", restArr);
     restArr.forEach(function(restaurant) {
       $(".results-list").append(
         "<div class='restaurant-display'>"
