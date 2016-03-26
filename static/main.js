@@ -307,16 +307,18 @@ function createRestDictionary() {
   searchResults.forEach(function(result) {
     var restCat = result.categories;
     
-    restCat.forEach(function(category) {
-      category.forEach(function(subcat) {
-        var currCat = subcat.toLowerCase();
-        if (!(currCat in restCategories)) {
-          restCategories[currCat] = new Set();
-        }
+    if (restCat !== undefined) {
+      restCat.forEach(function(category) {
+        category.forEach(function(subcat) {
+          var currCat = subcat.toLowerCase();
+          if (!(currCat in restCategories)) {
+            restCategories[currCat] = new Set();
+          }
 
-        restCategories[currCat].add(result);
+          restCategories[currCat].add(result);
+        });
       });
-    });
+    }
   });
 }
 
